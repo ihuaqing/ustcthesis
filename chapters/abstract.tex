@@ -1,30 +1,34 @@
 % !TeX root = ../main.tex
 
 \ustcsetup{
-  keywords  = {学位论文, 摘要, 关键词},
-  keywords* = {dissertation, abstract, keywords},
+  keywords  = {并行算法；优化；神威·太湖之光；分子动力学；LAMMPS},
+  keywords* = {Parallel Algorithm; Optimization; Sunway TaihuLight; Molecular Dynamics; LAMMPS},
 }
 
 \begin{abstract}
-  摘要分中文和英文两种，中文在前，英文在后，博士论文中文摘要一般 800～1500 个汉字，硕士论文中文摘要一般 500～1000 个汉字。
-  英文摘要的篇幅参照中文摘要。
+随着对微观体系探索的不断深入，直接通过实验设备和仪器进行微观粒子的观察变得相当困难。由此发展除了利用计算机进行粒子层面的模拟方法，利用这种方法既可以确定微观粒子的运动轨迹，又能够验证宏观层面的现象和结论。主要方法包括蒙特卡洛方法，分子动力学模拟，第一性原理模拟等，其中分子动力学模拟是其中适用性最广的一种方法。在分子动力学的发展过程中，通过在材料，生物等多领域的应用推动，不同的势函数算法也应运而生。
 
-  关键词另起一行并隔行排列于摘要下方，左顶格，中文关键词间空一字或用分号“，”隔开，英文关键词之间用逗号“,”或分号“;”隔开。
+半导体技术和集成电路工艺的发展使得处理器性能不断提高，与此同时多样的处理器架构与存储层次的变化也使得应用计算的优化变得愈发困难。异构众核处理器在继承了这些特点的同时，也为计算本身提出了更高的要求。发布于2016 年由我国自主研发的超级计算机神威·太湖之光搭载了 40960 颗 SW26010异构众核处理器，是我国首台由自主研发芯片构成的登顶Top500 的超级计算机。每块SW26010 处理器由4 个核组构成，共有260 个计算核心，采用特殊的“主-从核”结构设计，并辅以与通用架构不同的存储结构，这种设计能够在保证处理器计算性能的同时，实现优秀的能耗要求。也由于这种特殊的架构改动，使得在商用平台上的通用算法必须进行针对性的重构和并行优化才能充分发挥性能。
 
-  中文摘要是论文内容的总结概括，应简要说明论文的研究目的、基本研究内容、研究方法或过程、结果和结论，突出论文的创新之处。
-  摘要应具有独立性和自明性，即不用阅读全文，就能获得论文必要的信息。
-  摘要中不宜使用公式、图表，不引用文献。
+LAMMPS 作为分子动力学领域模拟体系涵盖最广的计算平台之一，支持生物，材料，化学等多领域和体系上的大规模计算。本文的研究目标是以申威众核平台为基础，对LAMMPS 势函数计算进行并行优化工作，并解决在分子动力学相关计算中出现的问题。本文的研究工作和成果分为以下几个方面：
 
-  中文关键词是为了文献标引工作从论文中选取出来用以表示全文主题内容信息的单词和术语，一般 3～8 个词，要求能够准确概括论文的核心内容。
+（1）在进行LAMMPS 在申威众核平台上的计算移植之前，本文首先通过性能分析工具找出程序热点并分析热点函数的代码框架和数据结构，进而对核心计算进行划分安排。接下来分析热点函数计算过程中的粒子规模和分布，结合不同的粒子迭代完成并行算法的设计工作。通过对不同位置粒子迭代的拆分，实现了不同粒度的并行算法。除此之外，在降低访存开销的同时，针对从核核组对粒子数据的写依赖问题给出了相应的解决方案。
+
+（2）申威异构众核的架构设计意味着在分子动力学的大规模计算中对访存带宽提出了要求。对于核心的访存问题，提出了包括从核通信规约，DMA 预取访存优化，软件Cache，向量化等多种方案提高访存优化。并结合申威众核处理器在不同计算规模下的并行效率和LAMMPS 势函数的计算特征，在解决访存写冲突的同时，进一步降低访存频率和开销，进而支持较大规模的分子动力学计算体系。
+
+（3）为了展示LAMMPS 从核特征优化策略在申威平台上取得的效果，本文分别实现了不同优化策略的从核版本和基础的串行版本进行比较。优化过后的LAMMPS 热点函数得到了96 倍的性能提升，接下来在扩展性测试中，随着计算规模的提升，强弱扩展性测试分别得到了 55\% 和 88\% 的性能表现。
 \end{abstract}
 
 \begin{abstract*}
-  This is a sample document of USTC thesis \LaTeX{} template for bachelor,
-  master and doctor. The template is created by zepinglee and seisman, which
-  orignate from the template created by ywg. The template meets the
-  equirements of USTC thesis writing standards.
+With the development of the microsystem continuously, observation of micro-scopic particles directly through experimental equipment and instrucments has become quite difficult. As a result, a computer-based simulation method at the particle level has been developed, using this method, the trajectory of microscopic particles can be determined, it can also verify the macro-level phenomena and conclusions. The main methods include Monte Carlo method, molecular dynamics simulation, first-principles simulation, etc, and molecular dynamics simulation is one of the most widely applica-ble methods. In the development process of molecular dynamics, through the promotion of applications in materials, biology and other fields, different potential function algo-rithms have also emerged.
 
-  This document will show the usage of basic commands provided by \LaTeX{} and
-  some features provided by the template. For more information, please refer to
-  the template document ustcthesis.pdf.
+The development of semiconductor technology and integrated circuit technology has continuously improved processor performance, at the same time, changes in various processor architectures and storage levels have also made the optimization of applica-tion computing more difficult. While the heterogeneous many-core processors inherit these characteristics, they also put forward higher requirements for the computing itself. The Sunway TaihuLight supercomputer independently developed in 2016 is equipped with 40960 heterogeneous many-core processors SW26010. It is the first self-developed supercomputer to rank the first in Top500 list. Each SW26010 processor consists of 4 core groups, with a total of 260 computing cores. Adopting a special ”master-slave core” structure design, supplemented by a storage structure different from the general architecture, this design can achieve excellent energy consumption requirements while ensuring the computing performance of the processor. Due to this special architectural change, the general algorithm on the commercial platform must be refactored and opti-mized in parallel to give full play to its performance.
+
+As one of the most comprehensive computing platforms in the field of molecular dynamics simulation system, LAMMPS supports large-scale calculations in biology, materials, chemistry and other fields and systems. The research goal of this paper is based on the Sunway many-core platform, to carry out parallel optimization work on the calculation of the LAMMPS potential function, and to solve the problems in the calculation of molecular dynamics. The research work and results of this article are divided into the following aspects:
+
+(1) Before carrying out the calculation transplantation of LAMMPS on the Sunwaymany-core platform, this paper first uses performance analysis tools to find program hotspots and analyzes the code framework and data structure of the hotspot functions, and then divides and arranges the core computing, and analyze the particle size and distribution in the hotspot function calculation process, and combine different particle iterations to complete the design of the parallel algorithm. Through the iterative splitting of particles at different positions, parallel algorithms with different granularities are realized. In addition, while reducing the memory access overhead, a corresponding solution is provided for the dependency of the core group on the writing of particle data.
+
+(2) The architecture design of the Sunway heterogeneous many-core means that the memory access bandwidth is required in the large-scale calculation of molecular dynam-ics. Regarding the core memory access problem, a variety of solutions including slave core communication optimization, DMA prefetching memory access optimization, soft-ware Cache, vectorization, etc., are proposed to improve memory access optimization. Combined with the parallel efficiency of the Sunway many-core processors under dif-ferent computing scales and the computing characteristics of the LAMMPS potential function, while resolving memory access and write conflicts, it further reduces mem-ory access frequency and overhead, thereby supporting larger-scale molecular dynamics Computing system.
+
+(3) In order to show the effect of LAMMPS from the slave core optimization strat-egy on the Sunway platform, this paper implements the comparison between the core version and the basic serial version of different optimization strategies. The optimized LAMMPS hotspot function has been improved by 96 times. Then, in the scalability test, with the increase of the calculation scale, the strong and weak scalability tests obtained 55\% and 88\% performance respectively.
 \end{abstract*}
