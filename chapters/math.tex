@@ -1,200 +1,49 @@
 % !TeX root = ../main.tex
 
-\chapter{数学}
+\chapter{LAMMPS 在申威平台上的并行实现}
 
-\section{数学符号}
+\section{热点函数分析}
+\subsection{热点函数耗时占比}
+为了能够更好的分析程序瓶颈和热点，并针对热点进行程序性能和资源利用率方面的优化，我们使用了Gprof(GNU profiler)[37] 作为性能分析工具。Gprof是一种以图执行方法作为基本算法的性能分析工具，其利用图的边作为执行时间，在运行时会同时通过收集程序调用次数, 调用执行时间和调用频率三类数据来进行性能分析统计的工作。并且允许使用者对可能需要优化的程序代码进行快速的可视化分析，以便清晰地找出程序性能的瓶颈所在。
 
-《撰写手册》要求数学符号遵循 GB/T 3102.11—1993《物理科学和技术中使用的数学符号》
-\footnote{原 GB 3102.11—1993，自 2017 年 3 月 23 日起，该标准转为推荐性标准。}。
-该标准参照采纳 ISO 31-11:1992 \footnote{目前已更新为 ISO 80000-2:2019。}，
-但是与 \TeX{} 默认的美国数学学会（AMS）的符号习惯有所区别。
-具体地来说主要有以下差异：
-\begin{enumerate}
-  \item 大写希腊字母默认为斜体，如
-    \begin{equation*}
-      \Gamma \Delta \Theta \Lambda \Xi \Pi \Sigma \Upsilon \Phi \Psi \Omega.
-    \end{equation*}
-    注意有限增量符号 $\increment$ 固定使用正体，模板提供了 \cs{increment} 命令。
-  \item 小于等于号和大于等于号使用倾斜的字形 $\le$、$\ge$。
-  \item 积分号使用正体，比如 $\int$、$\oint$。
-  \item
-    偏微分符号 $\partial$ 使用正体。
-  \item
-    省略号 \cs{dots} 按照中文的习惯固定居中，比如
-    \begin{equation*}
-      1, 2, \dots, n \quad 1 + 2 + \dots + n.
-    \end{equation*}
-  \item
-    实部 $\Re$ 和虚部 $\Im$ 的字体使用罗马体。
-\end{enumerate}
+但由于其是以子程序调用次数作为基本数据，就会不可避免的由于不同算例中核心子程序调用频度的差异，而对最终结果产生偏差。所以针对这个问题，我们通过采用一个较大规模的算例，来减少乃至覆盖掉这部分误差。
 
-以上数学符号样式的差异可以在模板中统一设置。
-但是还有一些需要用户在写作时进行处理：
-\begin{enumerate}
-  \item 数学常数和特殊函数名用正体，如
-    \begin{equation*}
-      \uppi = 3.14\dots; \quad
-      \symup{i}^2 = -1; \quad
-      \symup{e} = \lim_{n \to \infty} \left( 1 + \frac{1}{n} \right)^n.
-    \end{equation*}
-  \item 微分号使用正体，比如 $\dif y / \dif x$。
-  \item 向量、矩阵和张量用粗斜体（\cs{symbf}），如 $\symbf{x}$、$\symbf{\Sigma}$、$\symbfsf{T}$。
-  \item 自然对数用 $\ln x$ 不用 $\log x$。
-\end{enumerate}
+\subsection{热点函数代码框架}
+图 3.1 给出了 LAMMPS 中 eFF 势函数的计算过程, 整个计算包含两次 for 循环，第一层for 循环迭代体系中每个一个粒子，作为计算中的i，第二层循环则遍历迭代每个i 的邻居粒子，其中粒子由邻居列表给出，在确定粒子间距在对应的截断半径内后，开始进行粒子间受力的计算，在计算中由于粒子类型的不同，半径和带电量都会有所差别，并且这里会采用不同的计算方法，之后会给出此轮计算的最终受力，分别累加到 i，j 粒子上。
 
-模板中使用 \pkg{unicode-math} 宏包配置数学字体。
-该宏包与传统的 \pkg{amsfonts}、\pkg{amssymb}、\pkg{bm}、
-\pkg{mathrsfs}、\pkg{upgreek} 等宏包\emph{不}兼容。
-本模板作了处理，用户可以直接使用 \cs{bm}, \cs{mathscr},
-\cs{upGamma} 等命令。
-关于数学符号更多的用法，参见 \pkg{unicode-math} 宏包的使用说明和符号列表
-\pkg{unimath-symbols}。
+\subsection{热点函数数据结构}
+图 3.2 是 LAMMPS 中 eFF 计算中需要的数据结构，大致分类两类，第一类是粒子本身保存的数据，例如粒子坐标，类型，带电量等，这类数据大多是在计算输入文件中直接给出的，第二类则是在计算中体系生成的邻接表相关的信息。
 
+\section{主核移植}
+申威处理器作为并行处理器，计算的并行实现很大程度上需要依赖从核得高效计算和并行，但主核绝非出于次要的位置。主核自身功能与通用处理器类似，能够执行独立的进程，这就意味着在并行之前，我们可以先将程序移植到主核上，主要目的不仅仅是能够作为计算并行和优化的起点，更主要的是可以将其作为依据，确保计算在移植前和优化后的结果一致。
 
+申威处理器主核具有类似于通用处理器的运行流程，这样移植到主核上时程序本身基本可以不做修改。而主要工作就是修改编译环境，其中核心的是替换编译器，设置编译和链接路径，增加对应的编译参数，保证计算的正确性。
 
-\section{数学公式}
+\section{eFF 势函数计算在申威处理器上的并行实现}
+\subsection{程序移植}
+LAMMPS 作为一款分子动力学计算平台，其主要设计模型主要是使用 C++ 语言实现，这不仅在支持众多特性的同时，也使整个模型脉络和层次更加清晰，这当前几乎所有分子动力学平台一致采用的方案。但对于申威处理器来说，却并不是一个优势，反而成为了移植并行的一个障碍。从核编译器无法直接进行C++ 代码的编译，而进行并行和优化的前提正是高效利用从核进行计算。所以实现并行的第一步就是要把热点计算的部分重新以 C 语言实现，并剔除 C++ 中相关的语言特性，诸如类和对象，虚函数等。利用申威处理器的交叉编译来完成编译链接，为此设计了一个用于数据传递的结构体，其中包含了表 K 中的列出的所有计算信息。
 
-数学公式可以使用 \env{equation} 和 \env{equation*} 环境。
-注意数学公式的引用应前后带括号，建议使用 \cs{eqref} 命令，比如式~\eqref{eq:example}。
-\begin{equation}
-  \hat{f}(\xi) = \int_{-\infty}^\infty f(x) \eu^{-2 \uppi \iu x \xi} \dif x.
-  \label{eq:example}
-\end{equation}
+除此之外，由于在访问结构体，数组，向量等数据时，不对齐的Load/Store操作会引发不对齐访存异常，主核在收到异常会将指令拆分，但性能会大幅降低，而从核在引发异常后，程序会直接退出。这里有两种解决方法，第一种是在编译时加入-faddress\_align=N 编译选项，保证所有结构体，数组的首地址都以N字节对齐；第二种是在创建数组，结构体时加入\__attribute\__(aligned(size)) 进行手动对齐。前一种方法采用一种全局配置的方法解决访存对齐的问题，但同时会使编译器对其他无关访存操作的结构体，数组的首地址进行对齐处理，所以我们为了保证访存性能，选择后一种方案进行手动对齐。
 
-多行公式尽可能在“=”处对齐，推荐使用 \env{align} 环境，比如式~\eqref{eq:align_2}。
-\begin{align}
-  a & = b + c + d + e \label{eq:align_1} \\
-    & = f + g. \label{eq:align_2}
-\end{align}
+\subsection{任务划分}
+在进行 eFF 势函数计算中，绝大部分计算都集中在对两体势计算的过程中，也正因为如此对势函数的计算过程需要在从核中进行并行实现，算法核心框架如图 K 所示。整个势函数计算主要由两层迭代构成，外层循环遍历整个体系的粒子，计算规模由体系自身的粒子总量决定，可达千万量级。内层for 循环迭代粒子自身周边的邻居粒子，由邻接表指定，规模与体系内粒子密度和截断半径相关，一般来说在数百左右。
 
+利用从核进行计算并行的关键，就是要对这两层循环进行拆分，由于外层循环规模要明显大于内层循环，所以将外层循环拆分实现从核级并行是最优的方法。但由于分子动力学中牛顿第三定律的引入，导致在更新中心粒子受力的同时，不可避免地需要同时更新邻居粒子的受力情况，这样一来就会加剧计算时的数据依赖和存储空间限制等问题。下面会提出多种并行方案，通过平衡并行粒度，存储空间使用和计算量来找出对于计算 eFF 势函数更合适的并行方案。
 
+\subsection{内层循环并行}
+根据对势函数计算的分析，整体计算的并行主要是依赖于对内外层循环的拆分，并均匀分配到从核上。但由于牛顿第三定律的引入，在进行中心粒子的计算时，周围截断半径内的粒子受力信息也一并会更新，这使得在并行时数据依赖成为了一个棘手的问题。
 
-\section{量和单位}
+为了解决数据依赖的问题，这里选择了只对内层循环进行拆分，就是对单个粒子的邻居粒子计算进行拆分，并在每个周期对从核分配 N 个粒子对的计算，这样为了保证对于每个从核能够在一个执行周期内时间基本一致。
 
-量和单位要求严格执行 GB 3100～3102—1993 有关量和单位的规定。
-宏包 \pkg{siunitx} 提供了更好的数字和单位支持：
-\begin{itemize}
-  \item 为了阅读方便，四位以上的整数或小数推荐采用千分空的分节方式：\num{55235367.34623}。
-    四位以内的整数可以不加千分空：\num{1256}。
-  \item 数值与单位符号间留适当空隙：\SI{25.4}{mm}，\SI{5.97e24}{\kilo\gram}，
-    \SI{-273.15}{\degreeCelsius}。 例外：\SI{12.3}{\degree}，\ang{1;2;3}。
-  \item 组合单位默认使用 APS 的格式，即相乘的单位之间留一定空隙： \si{kg.m.s^{-2}}，
-    也可以使用居中的圆点： \si[inter-unit-product = \ensuremath{{}\cdot{}}]{kg.m.s^{-2}}。
-    GB 3100—1993 对两者都允许，建议全文统一设置。
-  \item 量值范围使用“～”：\SIrange{10}{15}{mol/L}。
-  \item 注意：词头 \textmu{} 不能写为 u，如：\si{umol} 应为 \si{\micro\mole}、\si{\umol}。
-\end{itemize}
+当每个从核进行 i 粒子与 N 个邻居粒子的粒子对的计算时，由于在这 N 次计算中i 粒子的坐标，电荷量等粒子信息会被多次调用，所以这些信息在计算时会一直保存在从核LDM 中，直到当前粒子计算完成，这就避免了从核频繁访问主存带来的开销。
 
+当每个从核对同一个进行所有邻居粒子的计算时，由于需要同时对i 粒子受力情况等信息进行更新时，就会带来写依赖的问题，不同从核会在进行 N 个粒子对的计算完成之后，进行并发地对i 粒子受力信息的更新，从而引发数据写写依赖的问题。这里选择在计算受力信息完成后不立即更新i 粒子，而是只保留每个从核计算后的增量，并保存在LDM 中，只有当整个粒子与所有邻居粒子的计算完成之后，才进行对受力情况的累加。这里选择0 号从核作为受力信息变化量的接收方，每个从核在累加受力情况之前，需要对从核间进行同步，以此来保证数据的一致性，之后每个从核会逐步将受力信息累加到0 号从核，在最终受力计算完成后，只由 0 号从核完成受力结构的写回，实现整个 i 粒子部分的计算。
 
+除了不同从核在更新i 粒子受力情况时会出现写写依赖，在单个从核完成对i 粒子的计算之后，进行下一个 i 粒子的计算时会出现读写依赖。这是因为上一个粒子的计算结果是由 0 号从核单独写回的，而从核访存需要数百个时钟周期来进行，速度要远低于计算指令的执行速度，就会出现在从核在进行下一个粒子的计算时，上个粒子的结果还没有写回，造成读写依赖。这里需要在每个从核在完成对同一个i 粒子的计算后，等待0 号从核完成粒子信息的写回，进行从核核组内的同步，消除读写数据依赖。还有一个注意的问题就是写回数据的连续性。由于牛顿第三定律的引入，受力等写回信息会被不同从核多次进行更新，这也就要求每次在访存的时候不能只对粒子坐标，带电量等不进行写回的数据读取，还需要读取受力等只写数据，并将此轮计算结果进行累加，保证数据的连续和正确。
 
-\section{定理和证明}
+\subsection{副本规约方法}
+对于内层循环并行方法，将第 i 层粒子与邻居粒子之间的计算实现了并行，在解决局部数据依赖的同时，一定程度上实现了从核级并行。但最大的问题就是每个粒子的邻居粒子数量十分有限，只有不到一千个，这在进行计算划分时从根本上限制了其并行粒度。为了提高计算的并行粒度，副本归约的方法采用对外层循环进行拆分，由于第i 层循环次数与体系规模有关，在体系中计算粒子的数量达到百万乃至千万的量级，并行粒度要远大于内层循环并行的方法。副本归约的方法每次将 N 个第 i 层粒子的计算赋给单个从核，对于 0 号从核计算 0 到第N-1 粒子，第N 到第2N-1 的粒子分给1 号从核，按照这个方法均匀分配了64 个从核之后，剩下的粒子依旧按照上述次序划分，知道所有粒子均划分完成。接下来讨论 N 的取值情况，得到一个合适的 N 值要考虑多方面的因素，在不同计算体系和规模下 N 的取值也可能是不同的。这里给出能够影响 N 取值的因素以及如何平衡 N 的取值。由于要保证一定的从核并行计算粒度，并且在当分配粒子数过少时对于访存会产生更大的开销，但又当 N 值过大的时候，每次所保存在LDM 中的粒子信息又会过大，由于存储空间的限制，又无法保证大规模计算的进行，并且在最后一轮的计算中，从核间计算的分配又会更加不均匀，反过来影响计算性能。
 
-示例文件中使用 \pkg{amsthm} 宏包配置了定理、引理和证明等环境。
-用户也可以使用 \pkg{ntheorem} 宏包。
+在副本归约方法中，数据写依赖的问题会变得更加严峻，因为对外层粒子循环进行拆分会对中心粒子和邻居粒子同时进行多次更新，为了解决存在粒子被多个从核同时更新造成写写依赖的问题，每个从核LDM 都会开辟一份单独的空间，在从核计算完受力等信息后，不直接对粒子进行写回，而是将结果写到临时空间内，等到从核此轮计算全部结束后，由0 号从核完成计算结果的累加，并单独写回主存。
 
-\begin{definition}
-  If the integral of function $f$ is measurable and non-negative, we define
-  its (extended) \textbf{Lebesgue integral} by
-  \begin{equation}
-    \int f = \sup_g \int g,
-  \end{equation}
-  where the supremum is taken over all measurable functions $g$ such that
-  $0 \le g \le f$, and where $g$ is bounded and supported on a set of
-  finite measure.
-\end{definition}
-
-\begin{assumption}
-The communication graph is strongly connected.
-\end{assumption}
-
-\begin{example}
-  Simple examples of functions on $\mathbb{R}^d$ that are integrable
-  (or non-integrable) are given by
-  \begin{equation}
-    f_a(x) =
-    \begin{cases}
-      |x|^{-a} & \text{if } |x| \le 1, \\
-      0        & \text{if } x > 1.
-    \end{cases}
-  \end{equation}
-  \begin{equation}
-    F_a(x) = \frac{1}{1 + |x|^a}, \qquad \text{all } x \in \mathbb{R}^d.
-  \end{equation}
-  Then $f_a$ is integrable exactly when $a < d$, while $F_a$ is integrable
-  exactly when $a > d$.
-\end{example}
-
-\begin{lemma}[Fatou]
-  Suppose $\{f_n\}$ is a sequence of measurable functions with $f_n \geq 0$.
-  If $\lim_{n \to \infty} f_n(x) = f(x)$ for a.e. $x$, then
-  \begin{equation}
-    \int f \le \liminf_{n \to \infty} \int f_n.
-  \end{equation}
-\end{lemma}
-
-\begin{remark}
-  We do not exclude the cases $\int f = \infty$,
-  or $\liminf_{n \to \infty} f_n = \infty$.
-\end{remark}
-
-\begin{corollary}
-  Suppose $f$ is a non-negative measurable function, and $\{f_n\}$ a sequence
-  of non-negative measurable functions with
-  $f_n(x) \le f(x)$ and $f_n(x) \to f(x)$ for almost every $x$. Then
-  \begin{equation}
-    \lim_{n \to \infty} \int f_n = \int f.
-  \end{equation}
-\end{corollary}
-
-\begin{proposition}
-  Suppose $f$ is integrable on $\mathbb{R}^d$. Then for every $\epsilon > 0$:
-  \begin{enumerate}
-    \renewcommand{\theenumi}{\roman{enumi}}
-    \item There exists a set of finite measure $B$ (a ball, for example) such
-      that
-      \begin{equation}
-        \int_{B^c} |f| < \epsilon.
-      \end{equation}
-    \item There is a $\delta > 0$ such that
-      \begin{equation}
-        \int_E |f| < \epsilon \qquad \text{whenever } m(E) < \delta.
-      \end{equation}
-  \end{enumerate}
-\end{proposition}
-
-\begin{theorem}
-  Suppose $\{f_n\}$ is a sequence of measurable functions such that
-  $f_n(x) \to f(x)$ a.e. $x$, as $n$ tends to infinity.
-  If $|f_n(x)| \le g(x)$, where $g$ is integrable, then
-  \begin{equation}
-    \int |f_n - f| \to 0 \qquad \text{as } n \to \infty,
-  \end{equation}
-  and consequently
-  \begin{equation}
-    \int f_n \to \int f \qquad \text{as } n \to \infty.
-  \end{equation}
-\end{theorem}
-
-\begin{proof}
-  Trivial.
-\end{proof}
-
-\newtheorem*{axiomofchoice}{Axiom of choice}
-\begin{axiomofchoice}
-  Suppose $E$ is a set and ${E_\alpha}$ is a collection of
-  non-empty subsets of $E$. Then there is a function $\alpha
-  \mapsto x_\alpha$ (a ``choice function'') such that
-  \begin{equation}
-    x_\alpha \in E_\alpha,\qquad \text{for all }\alpha.
-  \end{equation}
-\end{axiomofchoice}
-
-\newtheorem{observation}{Observation}
-\begin{observation}
-  Suppose a partially ordered set $P$ has the property
-  that every chain has an upper bound in $P$. Then the
-  set $P$ contains at least one maximal element.
-\end{observation}
-\begin{proof}[A concise proof]
-  Obvious.
-\end{proof}
+这种方法虽然能够提高并行性，但由于需要为 64 个从核在 LDM 中单独开辟一个副本，这对存储空间来说是一个极大的消耗，在计算规模过大的时候，这无疑是不可接受的。下一章会介绍一种通过平衡计算量，并保证从核计算并行度和计算规模的方法。
