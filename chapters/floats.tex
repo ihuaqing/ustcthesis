@@ -3,7 +3,7 @@
 \chapter{相关研究工作}
 \section{分子动力学理论基础}
 \subsection{分子动力学算法介绍}
-分子动力学实际上就是以牛顿定律为基础建立以坐标，受力，速度为体系的计算方法[19]。这种方法通常用于对微观粒子的运动进行理论分析，并且随着模拟的进行，在不同的阶段和时间内，这些属性都会根据不同的规则发生变化，可以简单理解为：
+分子动力学实际上就是以牛顿定律为基础建立以坐标，受力，速度为体系的计算方法\cite{rapaport2004art}。这种方法通常用于对微观粒子的运动进行理论分析，并且随着模拟的进行，在不同的阶段和时间内，这些属性都会根据不同的规则发生变化，可以简单理解为：
 
 \begin{equation}
   F_i = m_ia_i = m_i\frac{d^2r}{dt^2}
@@ -22,7 +22,7 @@
 \end{equation}
 
 \subsection{电子力场势函数}
-电子力场势函数方法 (electron force field, eFF) 发源于波包分子动力学方法，这种方法对于原子间的电离，激发等行为进行相应的描述，相对于经典分子动力学是一种方法上的补充和延伸。这种方法相对于第一性原理来说，可以进行更大规模体系上的粒子计算，分析更大尺度上的物理状态。这种方法是由Su, et al[20]首先提出，并且在 2011 年由 Jaramillo, et al[21] 加入进了 LAMMPS 计算平台[22]，组织成为了LAMMPS 里的USER-EFF 包。在利用密度泛函理论进行动力学计算时，首先对于质量不匹配的原子核和电子进行区分，对于质量极小的电子，利用波恩-奥本海默近似（Born-Oppenheimer approximation）[23] 进行计算，而对于原子核则利用费曼-海尔曼（Hellman-Feynman）[24] 定理进行求解，这样虽然计算理论完备，但是计算量极大，很难进行大规模粒子的计算，所以利用电子力场势函数可以在涉及电子电离，激发等效应的同时，又能够应用于大规模粒子体系。
+电子力场势函数方法 (electron force field, eFF) 发源于波包分子动力学方法，这种方法对于原子间的电离，激发等行为进行相应的描述，相对于经典分子动力学是一种方法上的补充和延伸。这种方法相对于第一性原理来说，可以进行更大规模体系上的粒子计算，分析更大尺度上的物理状态。这种方法是由Su, et al\cite{su2007excited}首先提出，并且在 2011 年由 Jaramillo, et al\cite{jaramillo2011large} 加入进了 LAMMPS 计算平台\cite{plimpton1995fast}，组织成为了LAMMPS 里的USER-EFF 包。在利用密度泛函理论进行动力学计算时，首先对于质量不匹配的原子核和电子进行区分，对于质量极小的电子，利用波恩-奥本海默近似（Born-Oppenheimer approximation）\cite{born1985quantentheorie} 进行计算，而对于原子核则利用费曼-海尔曼（Hellman-Feynman）\cite{feynman1939forces} 定理进行求解，这样虽然计算理论完备，但是计算量极大，很难进行大规模粒子的计算，所以利用电子力场势函数可以在涉及电子电离，激发等效应的同时，又能够应用于大规模粒子体系。
 
  \begin{figure}[h]
   \centering
@@ -43,7 +43,7 @@
 
 \subsection{电子力场势函数控制方程解法}
 \paragraph{控制方程的解法}
-对于计算粒子运动位置和轨迹信息，常用的数值积分方法有 Verlet 算法， Leapfrog 算法[25] 和 Gear Predictor-Corrector 算法[26]，其中 Verlet 算法计算速度快，性能好，并且可以占用较少的存储空间。但是计算不够精确，有较大的误差，在进行大规模计算时可能会出现问题。下面是 Verlet 的算法公式：
+对于计算粒子运动位置和轨迹信息，常用的数值积分方法有 Verlet 算法， Leapfrog 算法\cite{hut1995building} 和 Gear Predictor-Corrector 算法\cite{gear1967numerical}，其中 Verlet 算法计算速度快，性能好，并且可以占用较少的存储空间。但是计算不够精确，有较大的误差，在进行大规模计算时可能会出现问题。下面是 Verlet 的算法公式：
 
 \begin{equation}
   r(t+\triangle t)=2r(t)-r(t-\triangle t)+\triangle t^2a(t)
@@ -62,9 +62,9 @@ Leapfrog 算法能够准确算出结果信息，但由于其在计算中无法�
 
 \section{LAMMPS 计算平台介绍}
 \subsection{LAMMPS 软件介绍}
-LAMMPS（Large-scale Atomic/Molecular Massively Parallel Simulator）作为分子动力学计算领域内模拟体系涵盖最广的计算平台之一，由隶属于美国能源部的桑迪亚国家实验室进行开发和维护，可以进行多种体系的分子动力学模拟计算，包括生物大分子的结构微观模拟，合金等复合材料的热稳定性等机械性能。在材料力学中统计温度变化下势能，弹性常数的变化情况，并且提供了涉及多重体系的大量势函数，可以同时模拟出于固液气不同状态下的粒子行为，相比于其他分子动力学软件，例如GROMACS[27]，NAMD[28]，AMBER[29]，CHARMM[30]，拥有计算模型丰富，运行性能强大，上手容易等特点，软件代码迭代周期短，主要由 C++ 进行编写，其计算性能出色，已经在许多大型计算机上完成了不同体系下的多类大规模计算。针对并行计算的情况LAMMPS 采用了空间分解的方法将模拟体系划分为多个区域，并将子区域按需分配给不同的处理器进行计算。
+LAMMPS（Large-scale Atomic/Molecular Massively Parallel Simulator）作为分子动力学计算领域内模拟体系涵盖最广的计算平台之一，由隶属于美国能源部的桑迪亚国家实验室进行开发和维护，可以进行多种体系的分子动力学模拟计算，包括生物大分子的结构微观模拟，合金等复合材料的热稳定性等机械性能。在材料力学中统计温度变化下势能，弹性常数的变化情况，并且提供了涉及多重体系的大量势函数，可以同时模拟出于固液气不同状态下的粒子行为，相比于其他分子动力学软件，例如GROMACS\cite{berendsen1995gromacs}，NAMD\cite{phillips2005scalable}，AMBER\cite{pearlman1995amber}，CHARMM\cite{brooks1983charmm}，拥有计算模型丰富，运行性能强大，上手容易等特点，软件代码迭代周期短，主要由 C++ 进行编写，其计算性能出色，已经在许多大型计算机上完成了不同体系下的多类大规模计算。针对并行计算的情况LAMMPS 采用了空间分解的方法将模拟体系划分为多个区域，并将子区域按需分配给不同的处理器进行计算。
 
-LAMMPS 项目在20 世纪90 年代中期开始，直到2004 年给出了第一个开源版本，并且知道如今仍然以相当快的速度进行更新。截至 2021 年 4 月，最新的版本是8APR2021。LAMMPS 在提供大量势函数以及计算力场的基础上，同时也支持大量的硬件加速平台，并且针对这些平台额外编写了众多加速包进行支持，例如Nvidia GPU[31]，AMD ROCm[32]，Intel CPU 以及Xeon phi[33]。在加速模块中也提供了许多并行方法可供参考，如CUDA，OpenCL，ROCm HIP，OpenMP， MPI 等。LAMMPS 本身也对通用 CPU 的多种向量化指令集提供了支持，包括SSE2[34]，AVX256[35]，AVX512[36] 等。
+LAMMPS 项目在20 世纪90 年代中期开始，直到2004 年给出了第一个开源版本，并且知道如今仍然以相当快的速度进行更新。截至 2021 年 4 月，最新的版本是8APR2021。LAMMPS 在提供大量势函数以及计算力场的基础上，同时也支持大量的硬件加速平台，并且针对这些平台额外编写了众多加速包进行支持，例如Nvidia GPU\cite{hong2009analytical}，AMD ROCm\cite{kuznetsov2019porting}，Intel CPU 以及Xeon phi\cite{chrysos2014intel}。在加速模块中也提供了许多并行方法可供参考，如CUDA，OpenCL，ROCm HIP，OpenMP， MPI 等。LAMMPS 本身也对通用 CPU 的多种向量化指令集提供了支持，包括SSE2\cite{bik2002automatic}，AVX256\cite{lim2018implementation}，AVX512\cite{cornea2015intel} 等。
 
 \subsection{LAMMPS 工作流程介绍}
 LAMMPS 的主要工作流程大致可分为三部分：初始化过程，模拟与计算，数据的后处理过程。
