@@ -17,6 +17,47 @@
 \section{主核移植}
 申威处理器作为并行处理器，计算的并行实现很大程度上需要依赖从核得高效计算和并行，但主核绝非出于次要的位置。主核自身功能与通用处理器类似，能够执行独立的进程，这就意味着在并行之前，我们可以先将程序移植到主核上，主要目的不仅仅是能够作为计算并行和优化的起点，更主要的是可以将其作为依据，确保计算在移植前和优化后的结果一致。
 
+\begin{algorithm}[h]
+  \SetAlgoLined
+  \KwIn{$\vec{X}$，Q：整个体系中不同粒子的坐标和带电量\newline
+    S，R，T：粒子自旋，波包半径，类型\newline
+    L：邻接表\newline
+    n：体系中的粒子总数\newline
+    $r_{cut}$：截断半径
+  }
+  \KwOut{$\vec{F}$：粒子受力\newline
+    E：体系中的eFF势能
+  }
+
+  \For {$i\in[0...n)$}{
+      \For {$j\in L_j$}{
+        $\vec{r_{ij}} \leftarrow \vec{x_i}-\vec{x_j}$\;
+        $ r_{ij}^2 \leftarrow r_{ij}·r_{ij}$\;
+        \If {$r_{ij}^2 < r_{cut}^2$}{
+          $ dspline_i \leftarrow cutoff(r_{ij})$\;
+          \uIf {$S_i = 0 \&\& S_j = 0$}{
+            $fpair,ecoul \leftarrow ElecNucNuc(Q,r_{ij})$\;
+          }\uElseIf{$S_i = 0 \&\& abs(S_j) = 1$}{
+              $fpair,ecoul \leftarrow ElecNucElec(Q,r_{ij})$\;
+          }\uElseIf{$abs(S_i = 1) \&\& S_j = 0$}{
+            $fpair,ecoul \leftarrow ElecNucElec(Q,r_{ij})$\;
+          }\ElseIf{$abs(S_i = 1) \&\& abs(S_j) = 1$}{
+            $fpair,ecoul \leftarrow ElecElecElec(Q,r_{ij})$\;
+          }
+          $fpair \leftarrow fpair·dspline$\;
+          $E \leftarrow ecoul·dspline$\;
+          $\vec{f} \leftarrow SmallRForce(fpair,\vec{X})$\;
+          $\vec{F_i} \leftarrow \vec{F_i}+\vec{f}$\;
+          $\vec{F_j} \leftarrow \vec{F_j}+\vec{f}$\;
+        }
+      }
+  }
+  \caption{electron Force Field 势函数核心计算}
+  \label{algo:algorithm1}
+\end{algorithm}
+
+
+
 申威处理器主核具有类似于通用处理器的运行流程，这样移植到主核上时程序本身基本可以不做修改。而主要工作就是修改编译环境，其中核心的是替换编译器，设置编译和链接路径，增加对应的编译参数，保证计算的正确性。
 
 \section{eFF 势函数计算在申威处理器上的并行实现}
@@ -35,6 +76,8 @@ LAMMPS 作为一款分子动力学计算平台，其主要设计模型主要是�
 
 为了解决数据依赖的问题，这里选择了只对内层循环进行拆分，就是对单个粒子的邻居粒子计算进行拆分，并在每个周期对从核分配 N 个粒子对的计算，这样为了保证对于每个从核能够在一个执行周期内时间基本一致。
 
+
+
 当每个从核进行 i 粒子与 N 个邻居粒子的粒子对的计算时，由于在这 N 次计算中i 粒子的坐标，电荷量等粒子信息会被多次调用，所以这些信息在计算时会一直保存在从核LDM 中，直到当前粒子计算完成，这就避免了从核频繁访问主存带来的开销。
 
 当每个从核对同一个进行所有邻居粒子的计算时，由于需要同时对i 粒子受力情况等信息进行更新时，就会带来写依赖的问题，不同从核会在进行 N 个粒子对的计算完成之后，进行并发地对i 粒子受力信息的更新，从而引发数据写写依赖的问题。这里选择在计算受力信息完成后不立即更新i 粒子，而是只保留每个从核计算后的增量，并保存在LDM 中，只有当整个粒子与所有邻居粒子的计算完成之后，才进行对受力情况的累加。这里选择0 号从核作为受力信息变化量的接收方，每个从核在累加受力情况之前，需要对从核间进行同步，以此来保证数据的一致性，之后每个从核会逐步将受力信息累加到0 号从核，在最终受力计算完成后，只由 0 号从核完成受力结构的写回，实现整个 i 粒子部分的计算。
@@ -48,21 +91,3 @@ LAMMPS 作为一款分子动力学计算平台，其主要设计模型主要是�
 
 这种方法虽然能够提高并行性，但由于需要为 64 个从核在 LDM 中单独开辟一个副本，这对存储空间来说是一个极大的消耗，在计算规模过大的时候，这无疑是不可接受的。下一章会介绍一种通过平衡计算量，并保证从核计算并行度和计算规模的方法。
 
-\begin{algorithm}[h]
-  \SetAlgoLined
-  \KwData{$\vec{X}$, Q 整个体系中不同粒子的坐标和带电量}
-  \KwResult{how to write algorithm with \LaTeX2e }
-  
-  initialization\;
-  \While{not at end of this document}{
-    read current\;
-    \eIf{understand}{
-      go to next section\;
-      current section becomes this one\;
-    }{
-      go back to the beginning of current section\;
-    }
-  }
-  \caption{electron Force Field 势函数核心计算}
-  \label{algo:algorithm1}
-\end{algorithm}
