@@ -79,7 +79,25 @@ SW26010 处理器对于用户提供了完备的软件环境支持，其中对于
 
  \begin{figure}[h]
   \centering
-  \includegraphics[width=1\textwidth]{1_5.jpg}
+  \subfigure[主从同步模式]{
+      \centering
+      \includegraphics[width=0.3\textwidth]{mod1.png}
+  }
+  \hspace{0.5in}
+  \subfigure[主从协同模式]{
+      \centering
+      \includegraphics[width=0.3\textwidth]{mod2.png}
+  }
+  
+    \subfigure[主从异步模式]{
+      \centering
+      \includegraphics[width=0.3\textwidth]{mod3.png}
+  }
+    \hspace{0.5in}
+  \subfigure[主从动态模式]{
+      \centering
+      \includegraphics[width=0.3\textwidth]{mod4.png}
+  }
   \caption{SW26010 处理器并行模式}
 \end{figure}
 
@@ -99,7 +117,7 @@ SW26010 处理器中只有两条单发射顺序执行流水线，并且每条流
 
  \begin{figure}[h]
   \centering
-  \includegraphics[width=1\textwidth]{1_6.jpg}
+  \includegraphics[width=0.8\textwidth]{DMA_CPE.png}
   \caption{不同从核数量下DMA速度的变化}
 \end{figure}
 
