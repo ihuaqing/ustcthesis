@@ -2,6 +2,32 @@
 
 \chapter{eFF 势函数计算在申威处理器上的优化方法}
 
+\section{热点函数分析}
+\subsection{热点函数耗时占比}
+为了能够更好的分析程序瓶颈和热点，并针对热点进行程序性能和资源利用率方面的优化，我们使用了Gprof(GNU profiler)\cite{graham1982gprof} 作为性能分析工具。Gprof是一种以图执行方法作为基本算法的性能分析工具，其利用图的边作为执行时间，在运行时会同时通过收集程序调用次数, 调用执行时间和调用频率三类数据来进行性能分析统计的工作。并且允许使用者对可能需要优化的程序代码进行快速的可视化分析，以便清晰地找出程序性能的瓶颈所在。
+
+\begin{table}[]
+  \centering
+  \caption{eFF电子力场模型各模块耗时占比}
+  \renewcommand{\arraystretch}{1.5}
+\begin{tabular}{lll}
+\hline
+Module        & Unit Function        & Proportion \\ \hline
+Init          & setup                & 2.4\%      \\ \hline
+Compute       & paireff::compute     & 16.6\%     \\ \cline{2-3} 
+              & pair\_eff\_inline    & 68.7\%     \\ \cline{2-3} 
+              & virial\_eff\_compute & 3.1\%      \\ \cline{2-3} 
+              & ev\_tally\_eff       & 2.4\%      \\ \hline
+Neighbor list & init\_tables         & 0.8\%      \\ \hline
+Communication & comm                 & 2.3\%      \\ \hline
+I/O           & read\_data           & 0.7\%      \\ \cline{2-3} 
+              & write\_data          & 1.6\%      \\ \hline
+other         & /                    & 1.4\%      \\ \hline
+\end{tabular}
+\end{table}
+
+但由于其是以子程序调用次数作为基本数据，就会不可避免的由于不同算例中核心子程序调用频度的差异，而对最终结果产生偏差。所以针对这个问题，我们通过采用一个较大规模的算例，来减少乃至覆盖掉这部分误差。
+
 \section{从核通信规约}
 无论是内层循环并行，副本归约还是内端更新方法中，都需要进行对从核计算中的受力信息的累加，以此消除数据依赖的问题。为了保证整个从核计算的性能发挥，这里设计了一个高效的从核核组内的通信模式。由于每个粒子在从核内进行累加的变量占用的 LDM 空间相对有限，所以这里同样从核 LDM 内开辟了一份临时空间用于进行变量的累加。这种通信方式只涉及从核LDM 的使用，并不进行主核计算和占用主存空间，因此也避免了访存带来的额外开销。
 
